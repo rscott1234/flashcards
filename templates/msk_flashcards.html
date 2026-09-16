@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSK Flashcards</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .fc-controls { background: #fff; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        .fc-controls select { padding: 0.45rem 0.75rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.85rem; font-family: inherit; color: #2d3748; background: #fff; }
+        .fc-controls select:focus { border-color: #3182ce; outline: none; }
+        .fc-controls .btn { font-size: 0.82rem; padding: 0.45rem 1rem; }
+        .fc-counter { font-size: 0.85rem; color: #64748b; margin-left: auto; font-weight: 500; }
+        .fc-card-container { display: flex; justify-content: center; align-items: center; min-height: 380px; perspective: 1200px; cursor: pointer; margin-bottom: 1rem; }
+        .fc-card { position: relative; width: 100%; max-width: 600px; height: 380px; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+        .fc-card.flipped { transform: rotateY(180deg); }
+        .fc-card-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow-y: auto; }
+        .fc-card-front { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; flex-direction: row; padding: 1.5rem; gap: 1.5rem; }
+        .fc-card-front .fc-front-left { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 45%; }
+        .fc-card-front .fc-front-left img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); }
+        .fc-card-front .fc-front-right { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        .fc-card-front .card-joint { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; margin-bottom: 0.3rem; }
+        .fc-card-front .card-mode { display: inline-block; font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 4px; background: rgba(255,255,255,0.15); margin-bottom: 0.75rem; width: fit-content; }
+        .fc-card-front h2 { font-size: 1.4rem; line-height: 1.3; color: #fff; }
+        .fc-card-front .fc-front-placeholder { width: 45%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); font-size: 2.5rem; }
+        .fc-card-front .hint { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); font-size: 0.7rem; opacity: 0.45; white-space: nowrap; }
+        .fc-card-back { background: #fff; transform: rotateY(180deg); border: 1px solid #e2e8f0; }
+        .fc-card-back h3 { color: #1a365d; font-size: 1.15rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #edf2f7; }
+        .fc-detail { margin-bottom: 0.6rem; }
+        .fc-detail .fc-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #a0aec0; font-weight: 700; margin-bottom: 0.1rem; }
+        .fc-detail .fc-value { font-size: 0.85rem; color: #4a5568; line-height: 1.5; }
+        .fc-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .fc-tag { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: #ebf4ff; color: #2b6cb0; font-weight: 600; }
+        .fc-notes { font-size: 0.8rem; color: #718096; padding: 0.5rem; background: #f7fafc; border-radius: 6px; margin-top: auto; }
+        .fc-nav { display: flex; gap: 0.75rem; justify-content: center; align-items: center; }
+        .fc-nav .btn { min-width: 100px; justify-content: center; }
+        .fc-nav .btn-icon { font-size: 1.2rem; }
+        .fc-image-modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; padding: 2rem; cursor: zoom-out; }
+        .fc-image-modal.open { display: flex; }
+        .fc-image-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+        .fc-image-modal .fc-modal-close { position: fixed; top: 1.5rem; right: 2rem; color: #fff; font-size: 2rem; cursor: pointer; opacity: 0.7; background: none; border: none; }
+        .fc-image-modal .fc-modal-close:hover { opacity: 1; }
+        .fc-card-front .fc-front-left img { cursor: zoom-in; }
+        .fc-image-switch { display: flex; gap: 0.45rem; margin-top: 0.6rem; align-items: center; justify-content: center; }
+        .fc-image-switch button { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.35); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+        .fc-image-switch button:hover { transform: scale(1.3); }
+        .fc-image-switch button.active { background: #fff; }
+        .fc-empty { text-align: center; padding: 3rem; color: #a0aec0; }
+        .fc-empty h3 { color: #64748b; margin-bottom: 0.5rem; }
+        @media (max-width: 640px) {
+            .fc-card { height: 320px; }
+            .fc-card-face { padding: 1.25rem; }
+            .fc-card-front h2 { font-size: 1.25rem; }
+            .fc-controls { flex-direction: column; align-items: stretch; }
+            .fc-counter { margin-left: 0; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <a href="/" style="padding:0.4rem 0.9rem;border-radius:8px;background:#edf2f7;color:#4a5568;text-decoration:none;font-size:0.82rem;">Home</a>
+            <a href="/msk" style="padding:0.4rem 0.9rem;border-radius:8px;background:#edf2f7;color:#4a5568;text-decoration:none;font-size:0.82rem;">MSK Tool</a>
+        </div>
+
+        <div class="fc-controls">
+            <select id="fc-joint" onchange="loadCards()">
+                <option value="all">All Joints</option>
+                {% for j in joints %}
+                <option value="{{ j.key }}">{{ j.label }}</option>
+                {% endfor %}
+            </select>
+            <select id="fc-mode" onchange="loadCards()">
+                {% for k, m in modes.items() %}
+                <option value="{{ k }}">{{ m.icon }} {{ m.label }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" onclick="loadCards({shuffle:1})">🔀 Shuffle</button>
+            <span class="fc-counter" id="fc-counter">0 cards</span>
+        </div>
+
+        <div id="fc-empty" class="fc-empty" style="display:none;">
+            <h3>No cards found</h3>
+            <p>Try selecting a different joint or mode.</p>
+        </div>
+
+        <div id="fc-app" style="display:none;">
+            <div class="fc-card-container" onclick="flipCard()">
+                <div class="fc-card" id="fc-card">
+                    <div class="fc-card-face fc-card-front" id="fc-front">
+                        <div id="fc-front-image" class="fc-front-left" style="display:none;">
+                            <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+                                <img src="" alt="">
+                                <div id="fc-image-switch" class="fc-image-switch" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <div id="fc-front-placeholder" class="fc-front-placeholder">🫴</div>
+                        <div class="fc-front-right">
+                            <div class="card-joint" id="fc-joint-label"></div>
+                            <div class="card-mode" id="fc-mode-label"></div>
+                            <h2 id="fc-front-text">Loading...</h2>
+                        </div>
+                        <div class="hint">Tap to reveal answer</div>
+                    </div>
+                    <div class="fc-card-face fc-card-back" id="fc-back">
+                        <h3 id="fc-back-title"></h3>
+                        <div id="fc-tags" class="fc-tags"></div>
+                        <div id="fc-details"></div>
+                        <div id="fc-notes" class="fc-notes"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fc-nav">
+                <button class="btn btn-secondary" onclick="prevCard()">← Previous</button>
+                <span id="fc-position" style="font-size:0.85rem;color:#64748b;">1 / 1</span>
+                <button class="btn btn-primary" onclick="nextCard()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fc-image-modal" id="fc-image-modal" onclick="closeImageModal()">
+        <button class="fc-modal-close" onclick="closeImageModal()">✕</button>
+        <img id="fc-modal-img" src="" alt="">
+    </div>
+
+    <script>
+        let cards = [];
+        let currentIndex = 0;
+        let isFlipped = false;
+        let currentImages = [];
+        let currentImageIndex = 0;
+
+        async function loadCards(opts) {
+            opts = opts || {};
+            const joint = document.getElementById('fc-joint').value;
+            const mode = document.getElementById('fc-mode').value;
+            let url = '/msk/flashcards/data?mode=' + encodeURIComponent(mode) + '&joint=' + encodeURIComponent(joint);
+            if (opts.shuffle) url += '&shuffle=1';
+
+            try {
+                const resp = await fetch(url);
+                cards = await resp.json();
+            } catch(e) {
+                cards = [];
+            }
+
+            const emptyEl = document.getElementById('fc-empty');
+            const appEl = document.getElementById('fc-app');
+            const counter = document.getElementById('fc-counter');
+
+            counter.textContent = cards.length + ' card' + (cards.length !== 1 ? 's' : '');
+
+            if (cards.length === 0) {
+                emptyEl.style.display = 'block';
+                appEl.style.display = 'none';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            appEl.style.display = 'block';
+            currentIndex = 0;
+            showCard(0);
+        }
+
+        function showCard(index) {
+            if (index < 0 || index >= cards.length) return;
+            currentIndex = index;
+            isFlipped = false;
+
+            const card = cards[index];
+            const cardEl = document.getElementById('fc-card');
+            cardEl.classList.remove('flipped');
+
+            document.getElementById('fc-front-text').textContent = card.front;
+            document.getElementById('fc-joint-label').textContent = card.joint;
+            document.getElementById('fc-mode-label').textContent =
+                card.mode === 'tests' ? '🔬 Special Test' : '💪 Muscle Resistance';
+
+            const imgContainer = document.getElementById('fc-front-image');
+            const imgEl = imgContainer.querySelector('img');
+            const placeholder = document.getElementById('fc-front-placeholder');
+            if (card.image) {
+                currentImages = [card.image].concat(card.image2 ? [card.image2] : []);
+                currentImageIndex = 0;
+                displayCardImage();
+                setupImageSwitch();
+                imgContainer.style.display = 'flex';
+                placeholder.style.display = 'none';
+            } else {
+                imgContainer.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+            document.getElementById('fc-position').textContent =
+                (index + 1) + ' / ' + cards.length;
+
+            // Back
+            document.getElementById('fc-back-title').textContent = card.back_title;
+
+            const tagsEl = document.getElementById('fc-tags');
+            tagsEl.innerHTML = '';
+            if (card.extra_tags && card.extra_tags.length) {
+                card.extra_tags.forEach(t => {
+                    const tag = document.createElement('span');
+                    tag.className = 'fc-tag';
+                    tag.textContent = t;
+                    tagsEl.appendChild(tag);
+                });
+            }
+
+            const detailsEl = document.getElementById('fc-details');
+            detailsEl.innerHTML = '';
+            if (card.back_details && card.back_details.length) {
+                card.back_details.forEach(([label, value]) => {
+                    if (!value) return;
+                    const div = document.createElement('div');
+                    div.className = 'fc-detail';
+                    div.innerHTML =
+                        '<div class="fc-label">' + label + '</div>' +
+                        '<div class="fc-value">' + value + '</div>';
+                    detailsEl.appendChild(div);
+                });
+            }
+
+            const notesEl = document.getElementById('fc-notes');
+            if (card.notes) {
+                notesEl.textContent = '💡 ' + card.notes;
+                notesEl.style.display = 'block';
+            } else {
+                notesEl.style.display = 'none';
+            }
+        }
+
+        function displayCardImage() {
+            const imgEl = document.getElementById('fc-front-image').querySelector('img');
+            imgEl.src = '/static/images/msk/' + currentImages[currentImageIndex];
+            imgEl.alt = document.getElementById('fc-front-text').textContent;
+            imgEl.onclick = function(e) { e.stopPropagation(); openImageModal(this.src); };
+        }
+
+        function setupImageSwitch() {
+            const switchEl = document.getElementById('fc-image-switch');
+            switchEl.innerHTML = '';
+            if (currentImages.length < 2) {
+                switchEl.style.display = 'none';
+                return;
+            }
+            switchEl.style.display = 'flex';
+            currentImages.forEach(function(_, i) {
+                const b = document.createElement('button');
+                b.className = i === 0 ? 'active' : '';
+                b.title = i === 0 ? 'Grades 0-3' : 'Grades 4 & 5';
+                b.onclick = function(e) {
+                    e.stopPropagation();
+                    if (i === currentImageIndex) return;
+                    currentImageIndex = i;
+                    displayCardImage();
+                    Array.prototype.forEach.call(switchEl.children, function(child, c) {
+                        child.className = c === i ? 'active' : '';
+                    });
+                };
+                switchEl.appendChild(b);
+            });
+        }
+
+        function flipCard() {
+            const cardEl = document.getElementById('fc-card');
+            isFlipped = !isFlipped;
+            cardEl.classList.toggle('flipped', isFlipped);
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                showCard(currentIndex + 1);
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                showCard(currentIndex - 1);
+            }
+        }
+
+        function openImageModal(src) {
+            document.getElementById('fc-modal-img').src = src;
+            document.getElementById('fc-image-modal').classList.add('open');
+        }
+        function closeImageModal() {
+            document.getElementById('fc-image-modal').classList.remove('open');
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') prevCard();
+            if (e.key === 'ArrowRight') nextCard();
+            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+            if (e.key === 'Escape') closeImageModal();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCards();
+        });
+    </script>
+</body>
+</html>
