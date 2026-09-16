@@ -1267,16 +1267,7 @@ ENV_QUALIFIERS = [
 
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        categories=ICF_CATEGORIES,
-        qualifiers=QUALIFIERS,
-        env_qualifiers=ENV_QUALIFIERS,
-        conditions=CONDITION_SUGGESTIONS,
-        domain_info=DOMAIN_INFO,
-        discipline_info=DISCIPLINE_INFO,
-        outcome_measures=OUTCOME_MEASURES,
-    )
+    return redirect("/msk/flashcards")
 
 
 @app.route("/smart-goals")
@@ -1383,41 +1374,27 @@ def api_generate():
 
 @app.route("/msk")
 def msk_index():
-    return render_template("msk_index.html", joints=MSK_JOINTS)
+    return redirect("/msk/flashcards")
 
 
 @app.route("/msk/tests")
 def msk_tests_list():
-    return redirect("/msk/tests/shoulder")
+    return redirect("/msk/flashcards")
 
 
 @app.route("/msk/tests/<joint_key>")
 def msk_tests_detail(joint_key):
-    if joint_key not in MSK_SPECIAL_TESTS:
-        return render_template("msk_index.html", joints=MSK_JOINTS)
-    return render_template(
-        "msk_tests.html",
-        joint_key=joint_key,
-        joints=MSK_JOINTS,
-        joint_data=MSK_SPECIAL_TESTS[joint_key],
-    )
+    return redirect("/msk/flashcards")
 
 
 @app.route("/msk/resistance")
 def msk_resistance_list():
-    return redirect("/msk/resistance/shoulder")
+    return redirect("/msk/flashcards")
 
 
 @app.route("/msk/resistance/<joint_key>")
 def msk_resistance_detail(joint_key):
-    if joint_key not in MSK_MUSCLE_TESTS:
-        return render_template("msk_index.html", joints=MSK_JOINTS)
-    return render_template(
-        "msk_resistance.html",
-        joint_key=joint_key,
-        joints=MSK_JOINTS,
-        joint_data=MSK_MUSCLE_TESTS[joint_key],
-    )
+    return redirect("/msk/flashcards")
 
 
 FLASHCARD_MODES = {
